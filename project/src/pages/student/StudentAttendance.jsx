@@ -1,81 +1,58 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Calendar, TrendingUp, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+import { apiFetch } from '../../lib/api'
 
 const StudentAttendance = () => {
+  const { user } = useAuth()
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [attendanceData, setAttendanceData] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const attendanceData = [
-    { date: '2024-02-01', status: 'Present', checkIn: '09:15 AM', subject: 'Database Systems' },
-    { date: '2024-02-02', status: 'Present', checkIn: '09:10 AM', subject: 'Web Development' },
-    { date: '2024-02-03', status: 'Absent', checkIn: null, subject: 'Data Structures' },
-    { date: '2024-02-05', status: 'Present', checkIn: '09:20 AM', subject: 'Computer Networks' },
-    { date: '2024-02-06', status: 'Late', checkIn: '09:45 AM', subject: 'Database Systems' },
-    { date: '2024-02-07', status: 'Present', checkIn: '09:05 AM', subject: 'Web Development' },
-    { date: '2024-02-08', status: 'Present', checkIn: '09:18 AM', subject: 'Data Structures' },
-    { date: '2024-02-09', status: 'Present', checkIn: '09:12 AM', subject: 'Computer Networks' },
-    { date: '2024-02-12', status: 'Absent', checkIn: null, subject: 'Database Systems' },
-    { date: '2024-02-13', status: 'Present', checkIn: '09:08 AM', subject: 'Web Development' },
-    { date: '2024-02-14', status: 'Present', checkIn: '09:22 AM', subject: 'Data Structures' },
-    { date: '2024-02-15', status: 'Present', checkIn: '09:14 AM', subject: 'Computer Networks' },
-  ]
+  useEffect(() => {
+    const fetchStudentAttendance = async () => {
+      if (!user?.studentId) {
+        setAttendanceData([])
+        setLoading(false)
+        return
+      }
 
-  const subjectAttendance = [
-    { 
-      subject: 'Database Systems', 
-      total: 25, 
-      present: 22, 
-      percentage: 88,
-      color: '#3b82f6'
-    },
-    { 
-      subject: 'Web Development', 
-      total: 20, 
-      present: 19, 
-      percentage: 95,
-      color: '#10b981'
-    },
-    { 
-      subject: 'Data Structures', 
-      total: 22, 
-      present: 20, 
-      percentage: 91,
-      color: '#8b5cf6'
-    },
-    { 
-      subject: 'Computer Networks', 
-      total: 18, 
-      present: 15, 
-      percentage: 83,
-      color: '#f59e0b'
+      try {
+        const response = await apiFetch(`/api/attendance/student/${user.studentId}`)
+        if (!response.ok) throw new Error('Failed to fetch attendance')
+        const data = await response.json()
+        setAttendanceData(data.data || [])
+      } catch (error) {
+        console.error(error)
+        setAttendanceData([])
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
 
-  const getOverallStats = () => {
-    const totalClasses = subjectAttendance.reduce((sum, subject) => sum + subject.total, 0)
-    const totalPresent = subjectAttendance.reduce((sum, subject) => sum + subject.present, 0)
-    const overallPercentage = totalClasses > 0 ? ((totalPresent / totalClasses) * 100).toFixed(1) : 0
+    fetchStudentAttendance()
+  }, [user])
 
-    const thisMonthData = attendanceData.filter(record => {
-      const recordDate = new Date(record.date)
-      return recordDate.getMonth() === selectedMonth && recordDate.getFullYear() === selectedYear
-    })
+  const attendanceSummary = attendanceData.reduce((summary, record) => {
+    if (record.status === 'Present' || record.status === 'Late') summary.present += 1
+    if (record.status === 'Absent') summary.absent += 1
+    summary.total += 1
+    return summary
+  }, { present: 0, absent: 0, total: 0 })
 
-    const monthlyPresent = thisMonthData.filter(r => r.status === 'Present' || r.status === 'Late').length
-    const monthlyTotal = thisMonthData.length
-    const monthlyPercentage = monthlyTotal > 0 ? ((monthlyPresent / monthlyTotal) * 100).toFixed(1) : 0
+  const overallPercentage = attendanceSummary.total > 0
+    ? ((attendanceSummary.present / attendanceSummary.total) * 100).toFixed(1)
+    : 0
 
-    return {
-      overall: overallPercentage,
-      totalClasses,
-      totalPresent,
-      monthly: monthlyPercentage,
-      monthlyPresent,
-      monthlyTotal
-    }
-  }
+  const thisMonthData = attendanceData.filter((record) => {
+    const recordDate = new Date(record.date)
+    return recordDate.getMonth() === selectedMonth && recordDate.getFullYear() === selectedYear
+  })
 
-  const stats = getOverallStats()
+  const monthlyPresent = thisMonthData.filter((r) => r.status === 'Present' || r.status === 'Late').length
+  const monthlyTotal = thisMonthData.length
+  const monthlyPercentage = monthlyTotal > 0 ? ((monthlyPresent / monthlyTotal) * 100).toFixed(1) : 0
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -102,122 +79,97 @@ const StudentAttendance = () => {
         <p>Track your attendance record and performance</p>
       </div>
 
-      {/* Overall Stats */}
-      <div className="stats-grid">
-        <div className="stat-card overall">
-          <div className="stat-icon">
-            <TrendingUp size={32} color="white" />
-          </div>
-          <div className="stat-content">
-            <h3>{stats.overall}%</h3>
-            <p>Overall Attendance</p>
-            <span className="stat-detail">{stats.totalPresent}/{stats.totalClasses} classes</span>
-          </div>
-        </div>
-        <div className="stat-card monthly">
-          <div className="stat-icon">
-            <Calendar size={32} color="white" />
-          </div>
-          <div className="stat-content">
-            <h3>{stats.monthly}%</h3>
-            <p>This Month</p>
-            <span className="stat-detail">{stats.monthlyPresent}/{stats.monthlyTotal} classes</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Subject-wise Attendance */}
-      <div className="subjects-section">
-        <h2>Subject-wise Attendance</h2>
-        <div className="subjects-grid">
-          {subjectAttendance.map((subject, index) => (
-            <div key={index} className="subject-card">
-              <div className="subject-header">
-                <h3>{subject.subject}</h3>
-                <span className={`percentage ${subject.percentage >= 90 ? 'excellent' : subject.percentage >= 75 ? 'good' : 'warning'}`}>
-                  {subject.percentage}%
-                </span>
+      {loading ? (
+        <div className="loading-state">Loading attendance...</div>
+      ) : (
+        <>
+          <div className="stats-grid">
+            <div className="stat-card overall">
+              <div className="stat-icon">
+                <TrendingUp size={32} color="white" />
               </div>
-              <div className="attendance-progress">
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ 
-                      width: `${subject.percentage}%`, 
-                      backgroundColor: subject.color 
-                    }}
-                  ></div>
-                </div>
-                <div className="attendance-count">
-                  {subject.present}/{subject.total} classes
-                </div>
+              <div className="stat-content">
+                <h3>{overallPercentage}%</h3>
+                <p>Overall Attendance</p>
+                <span className="stat-detail">{attendanceSummary.present}/{attendanceSummary.total} classes</span>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Attendance Records */}
-      <div className="records-section">
-        <div className="records-header">
-          <h2>Attendance Records</h2>
-          <div className="date-filters">
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="form-select"
-            >
-              {months.map((month, index) => (
-                <option key={index} value={index}>{month}</option>
-              ))}
-            </select>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="form-select"
-            >
-              <option value={2024}>2024</option>
-              <option value={2023}>2023</option>
-            </select>
+            <div className="stat-card monthly">
+              <div className="stat-icon">
+                <Calendar size={32} color="white" />
+              </div>
+              <div className="stat-content">
+                <h3>{monthlyPercentage}%</h3>
+                <p>This Month</p>
+                <span className="stat-detail">{monthlyPresent}/{monthlyTotal} classes</span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="records-table-container">
-          <table className="table records-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Subject</th>
-                <th>Status</th>
-                <th>Check-in Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attendanceData
-                .filter(record => {
-                  const recordDate = new Date(record.date)
-                  return recordDate.getMonth() === selectedMonth && recordDate.getFullYear() === selectedYear
-                })
-                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                .map((record, index) => (
-                  <tr key={index}>
-                    <td>{new Date(record.date).toLocaleDateString()}</td>
-                    <td>{record.subject}</td>
-                    <td>
-                      <div className="status-cell">
-                        {getStatusIcon(record.status)}
-                        <span className={`status-badge status-${record.status.toLowerCase()}`}>
-                          {record.status}
-                        </span>
-                      </div>
-                    </td>
-                    <td>{record.checkIn || '-'}</td>
+          <div className="records-section">
+            <div className="records-header">
+              <h2>Attendance Records</h2>
+              <div className="date-filters">
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                  className="form-select"
+                >
+                  {months.map((month, index) => (
+                    <option key={index} value={index}>{month}</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="form-select"
+                >
+                  <option value={2026}>2026</option>
+                  <option value={2025}>2025</option>
+                  <option value={2024}>2024</option>
+                  <option value={2023}>2023</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="records-table-container">
+              <table className="table records-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Check-in Time</th>
                   </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </thead>
+                <tbody>
+                  {thisMonthData
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .map((record, index) => (
+                      <tr key={index}>
+                        <td>{new Date(record.date).toLocaleDateString()}</td>
+                        <td>
+                          <div className="status-cell">
+                            {getStatusIcon(record.status)}
+                            <span className={`status-badge status-${record.status.toLowerCase()}`}>
+                              {record.status}
+                            </span>
+                          </div>
+                        </td>
+                        <td>{record.checkInTime || '-'}</td>
+                      </tr>
+                    ))}
+                  {thisMonthData.length === 0 && (
+                    <tr>
+                      <td colSpan="3">No attendance records for this month.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
 
       {/* Attendance Guidelines */}
       <div className="guidelines-section">
@@ -253,10 +205,11 @@ const StudentAttendance = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .student-attendance {
           max-width: 1200px;
-          width: 1000px;
+          width: 100%;
+          max-width: 100%;
           margin: 0 auto;
         }
 
@@ -397,7 +350,7 @@ const StudentAttendance = () => {
           height: 8px;
           background-color: #e5e7eb;
           border-radius: 4px;
-          overflow: hidden;
+          overflow-x: auto;
         }
 
         .progress-fill {

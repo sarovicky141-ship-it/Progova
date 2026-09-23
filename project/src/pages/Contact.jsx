@@ -225,7 +225,7 @@ const Contact = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .contact-page {
           min-height: 100vh;
           background-color: #f8fafc;
@@ -235,6 +235,7 @@ const Contact = () => {
           max-width: 1200px;
           margin: 0 auto;
           padding: 0 20px;
+          width: 100%;
         }
 
         .page-header {
@@ -295,6 +296,7 @@ const Contact = () => {
           border: 1px solid #e5e7eb;
           border-radius: 16px;
           transition: all 0.3s ease;
+          min-width: 0;
         }
 
         .contact-card:hover {
@@ -320,6 +322,7 @@ const Contact = () => {
           font-weight: 600;
           color: #1f2937;
           margin-bottom: 8px;
+          overflow-wrap: anywhere;
         }
 
         .contact-value {
@@ -327,6 +330,7 @@ const Contact = () => {
           font-weight: 500;
           color: #10b981;
           margin-bottom: 4px;
+          overflow-wrap: anywhere;
         }
 
         .contact-description {
@@ -342,6 +346,7 @@ const Contact = () => {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 60px;
+          min-width: 0;
         }
 
         .form-section {
@@ -350,6 +355,7 @@ const Contact = () => {
           border-radius: 16px;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
           border: 1px solid #e5e7eb;
+          min-width: 0;
         }
 
         .form-header {
@@ -420,6 +426,7 @@ const Contact = () => {
           border-radius: 16px;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
           border: 1px solid #e5e7eb;
+          min-width: 0;
         }
 
         .faq-section h2 {
@@ -491,6 +498,32 @@ const Contact = () => {
           .faq-section h2 {
             font-size: 24px;
           }
+        }
+
+        @media (max-width: 425px) {
+          .container { padding: 0 14px; }
+          .page-header { padding: 26px 0 44px 0; }
+          .back-link { margin-bottom: 22px; }
+          .header-content h1 { font-size: 31px; }
+          .header-content p { font-size: 16px; }
+          .contact-info-section, .main-content { padding: 34px 0; }
+          .contact-grid { gap: 14px; }
+          .contact-card { gap: 12px; padding: 18px; }
+          .contact-icon { width: 44px; height: 44px; }
+          .contact-details h3 { font-size: 17px; }
+          .contact-value { font-size: 14px; }
+          .form-section, .faq-section { padding: 18px; border-radius: 12px; }
+          .contact-form { gap: 17px; }
+          .faq-list { gap: 14px; }
+          .faq-item { padding: 17px; }
+        }
+
+        @media (max-width: 375px) {
+          .container { padding: 0 12px; }
+          .contact-card { align-items: flex-start; }
+          .contact-icon { width: 40px; height: 40px; }
+          .form-header h2, .faq-section h2 { font-size: 21px; }
+          .submit-btn { width: 100%; padding-inline: 16px; }
         }
       `}</style>
     </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Search, Plus, Edit, Trash2, Eye, UserPlus } from "lucide-react";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import auth from "../../../libs/firebase";
+import { Search, Plus, Edit, Trash2, Eye, EyeOff, UserPlus } from "lucide-react";
+import { apiFetch } from "../../lib/api";
+import FormIllustration from "../../components/shared/FormIllustration";
 import "./StudentManagement.css";
 
 const StudentManagement = () => {
@@ -12,14 +12,11 @@ const StudentManagement = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/students");
+      const response = await apiFetch("/api/students");
       if (!response.ok) throw new Error("Failed to fetch students");
       const data = await response.json();
       setStudents(data.data);
-      ////data.data);
     } catch (error) {
-      ////"skkk");
-
       alert(error.message);
     }
   };
@@ -28,6 +25,7 @@ const StudentManagement = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [viewingStudent, setViewingStudent] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [newStudent, setNewStudent] = useState({
     name: "",
     email: "",
@@ -35,7 +33,7 @@ const StudentManagement = () => {
     semester: "",
     rollNumber: "",
     phone: "",
-    password: "student123",
+    password: "",
   });
 
   const filteredStudents = students.filter(
@@ -48,44 +46,25 @@ const StudentManagement = () => {
 
   const handleAddStudent = async (e) => {
     e.preventDefault();
-    const id = `ST${String(students.length + 1).padStart(3, "0")}`;
-    const student = {
-      ...newStudent,
-      id,
-      status: "",
-      joinDate: new Date().toISOString().split("T")[0],
+
+    const studentPayload = {
+      name: newStudent.name,
+      email: newStudent.email,
+      course: newStudent.course,
+      semester: Number(newStudent.semester),
+      rollNumber: newStudent.rollNumber,
+      phone: newStudent.phone,
+      password: newStudent.password,
     };
-    //newStudent.email, newStudent.password, newStudent.name);
-    try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        newStudent.email,
-        newStudent.password
-      );
-      const user = userCredential.user;
-
-      // Set the user's display name
-      await updateProfile(user, {
-        displayName: newStudent.name,
-      });
-
-      //"User signed up with name:", user.displayName);
-      //"User signed up:", user);
-    } catch (error) {
-      alert(`Signup error`);
-      console.error("Signup error:", error.message);
-      return;
-    }
 
     try {
-      const response = await fetch("http://localhost:3000/api/students", {
+      const response = await apiFetch("/api/students", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(student),
+        body: JSON.stringify(studentPayload),
       });
-      //response);
 
       if (!response.ok) {
         const error = await response.json();
@@ -94,7 +73,6 @@ const StudentManagement = () => {
       }
 
       const result = await response.json();
-      // Update local state with new student
       setStudents((prev) => [...prev, result.data]);
       alert("Student added successfully!");
 
@@ -125,8 +103,8 @@ const StudentManagement = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/students/${editingStudent.id}`,
+      const response = await apiFetch(
+        `/api/students/${editingStudent.id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -167,7 +145,7 @@ const StudentManagement = () => {
       return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/students/${id}`, {
+      const response = await apiFetch(`/api/students/${id}`, {
         method: "DELETE",
       });
       if (!response.ok) {
@@ -287,7 +265,7 @@ const StudentManagement = () => {
       {/* Add/Edit Student Modal */}
       {showAddForm && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal progova-form-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>
                 <UserPlus size={24} />
@@ -300,6 +278,8 @@ const StudentManagement = () => {
             <form
               onSubmit={editingStudent ? handleUpdateStudent : handleAddStudent}
             >
+              <div className="progova-form-layout">
+              <div className="progova-form-fields">
               <div className="form-grid">
                 <div className="form-group">
                   <label className="form-label">Full Name</label>
@@ -391,6 +371,26 @@ const StudentManagement = () => {
                     required
                   />
                 </div>
+                {!editingStudent && (
+                  <div className="form-group">
+                    <label className="form-label">Temporary Password</label>
+                    <div className="password-field">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        className="form-input"
+                        value={newStudent.password}
+                        onChange={(e) =>
+                          setNewStudent({ ...newStudent, password: e.target.value })
+                        }
+                        minLength="8"
+                        required
+                      />
+                      <button type="button" className="password-toggle" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"}>
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="modal-footer">
                 <button
@@ -403,6 +403,9 @@ const StudentManagement = () => {
                 <button type="submit" className="btn btn-primary">
                   {editingStudent ? "Update Student" : "Add Student"}
                 </button>
+              </div>
+              </div>
+              <FormIllustration variant="student" />
               </div>
             </form>
           </div>

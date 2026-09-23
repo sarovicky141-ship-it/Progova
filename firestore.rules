@@ -1,0 +1,64 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.uid == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    match /feedbacks/{feedbackId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin()
+        || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /placements/{placementId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+
+      match /applications/{uid} {
+        allow read, write: if isAdmin()
+          || (signedIn() && request.auth.uid == uid);
+      }
+    }
+
+    match /messages/{messageId} {
+      allow read: if isAdmin()
+        || (signedIn() && (resource.data.broadcast == true || resource.data.recipientUid == request.auth.uid));
+      allow write: if isAdmin();
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.uid == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    match /metadata/{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

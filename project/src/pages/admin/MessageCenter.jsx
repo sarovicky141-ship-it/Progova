@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Send, Plus, Users, Bell, Mail, Trash2 } from "lucide-react";
+import { apiFetch } from "../../lib/api";
+import FormIllustration from "../../components/shared/FormIllustration";
 
 const MessageCenter = () => {
   const [announcements, setAnnouncements] = useState([]);
@@ -9,7 +11,7 @@ const MessageCenter = () => {
     // Fetch messages from backend API on mount
     const fetchMessages = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/messages");
+        const response = await apiFetch("/api/messages");
         if (!response.ok) {
           throw new Error("Failed to fetch messages");
         }
@@ -29,7 +31,7 @@ const MessageCenter = () => {
 
   const fetchAnnouncements = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/announcements");
+      const response = await apiFetch("/api/announcements");
       if (!response.ok) {
         throw new Error("Failed to fetch announcements");
       }
@@ -59,7 +61,7 @@ const MessageCenter = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch("http://localhost:3000/api/messages", {
+      const response = await apiFetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newMessage),
@@ -93,7 +95,7 @@ const MessageCenter = () => {
     };
 
     try {
-      const response = await fetch("http://localhost:3000/api/announcements", {
+      const response = await apiFetch("/api/announcements", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,8 +132,8 @@ const MessageCenter = () => {
       return;
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/announcements/${id}`,
+      const response = await apiFetch(
+        `/api/announcements/${id}`,
         {
           method: "DELETE",
         }
@@ -157,7 +159,7 @@ const MessageCenter = () => {
       return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/messages/${id}`, {
+      const response = await apiFetch(`/api/messages/${id}`, {
         method: "DELETE",
       });
 
@@ -309,7 +311,7 @@ const MessageCenter = () => {
       {/* Send Message Modal */}
       {showMessageForm && (
         <div className="modal-overlay" onClick={closeModals}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal progova-form-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>
                 <Send size={24} />
@@ -320,6 +322,8 @@ const MessageCenter = () => {
               </button>
             </div>
             <form onSubmit={handleSendMessage}>
+              <div className="progova-form-layout">
+              <div className="progova-form-fields">
               <div className="form-content">
                 <div className="form-group">
                   <label className="form-label">Subject</label>
@@ -406,6 +410,9 @@ const MessageCenter = () => {
                   Send Message
                 </button>
               </div>
+              </div>
+              <FormIllustration variant="message" />
+              </div>
             </form>
           </div>
         </div>
@@ -414,7 +421,7 @@ const MessageCenter = () => {
       {/* Post Announcement Modal */}
       {showAnnouncementForm && (
         <div className="modal-overlay" onClick={closeModals}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal progova-form-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>
                 <Bell size={24} />
@@ -425,6 +432,8 @@ const MessageCenter = () => {
               </button>
             </div>
             <form onSubmit={handlePostAnnouncement}>
+              <div className="progova-form-layout">
+              <div className="progova-form-fields">
               <div className="form-content">
                 <div className="form-group">
                   <label className="form-label">Title</label>
@@ -488,15 +497,19 @@ const MessageCenter = () => {
                   Post Announcement
                 </button>
               </div>
+              </div>
+              <FormIllustration variant="announcement" />
+              </div>
             </form>
           </div>
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .message-center {
           max-width: 1200px;
-          width: 1000px;
+          width: 100%;
+          max-width: 100%;
           margin: 0 auto;
         }
 
@@ -524,7 +537,7 @@ const MessageCenter = () => {
 
         .content-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 32px;
         }
 

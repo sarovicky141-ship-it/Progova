@@ -269,7 +269,7 @@ const StudentProgress = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .student-progress {
           max-width: 1200px;
           margin: 0 auto;

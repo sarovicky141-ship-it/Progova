@@ -1,0 +1,9 @@
+[35mserver/index.js[m[36m:[m[32m13[m[36m:[m[1;31mapp.get[m("/api/health", (req, res) => {
+[35mserver/index.js[m[36m:[m[32m91[m[36m:[m[1;31mapp.get[m("/", (req, res) => {
+[35mserver/index.js[m[36m:[m[32m100[m[36m:[m[1;31mapp.get[m("/api/students", requireAdmin, async (req, res) => {
+[35mserver/index.js[m[36m:[m[32m317[m[36m:[m[1;31mapp.get[m("/api/attendance", requireAdmin, async (req, res) => {
+[35mserver/index.js[m[36m:[m[32m337[m[36m:[m[1;31mapp.get[m("/api/attendance/student/:studentId", requireAuth, async (req, res) => {
+[35mserver/index.js[m[36m:[m[32m418[m[36m:[m[1;31mapp.get[m("/api/feedbacks", requireAuth, async (req, res) => {
+[35mserver/index.js[m[36m:[m[32m509[m[36m:[m[1;31mapp.get[m("/api/announcements", requireAuth, async (req, res) => {
+[35mserver/index.js[m[36m:[m[32m612[m[36m:[m[1;31mapp.get[m("/api/placements", requireAuth, async (req, res) => {
+[35mserver/index.js[m[36m:[m[32m809[m[36m:[m[1;31mapp.get[m("/api/messages", requireAuth, async (req, res) => {

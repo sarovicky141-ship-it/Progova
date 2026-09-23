@@ -8,6 +8,7 @@ import {
   TrendingUp,
   Award,
 } from "lucide-react";
+import { apiFetch } from "../../lib/api";
 
 const AdminHome = () => {
   const [students, setStudents] = useState([]);
@@ -22,7 +23,7 @@ const AdminHome = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/students");
+      const response = await apiFetch("/api/students");
       if (!response.ok) throw new Error("Failed to fetch students");
       const data = await response.json();
       setStudents(data.data);
@@ -35,7 +36,7 @@ const AdminHome = () => {
   useEffect(() => {
     const fetchFeedbacks = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/feedbacks");
+        const res = await apiFetch("/api/feedbacks");
         if (!res.ok) throw new Error("Failed to fetch feedbacks");
         const data = await res.json();
         setFeedback(data.data || []);
@@ -108,7 +109,7 @@ const AdminHome = () => {
   const recentActivities = [
     {
       action: "New student registered",
-      details: "John Smith - Computer Science",
+      details: "tamil - Computer Science",
       time: "2 hours ago",
       type: "success",
     },
@@ -140,7 +141,7 @@ const AdminHome = () => {
 
   const fetchAnnouncements = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/announcements");
+      const response = await apiFetch("/api/announcements");
       if (!response.ok) {
         throw new Error("Failed to fetch announcements");
       }
@@ -232,7 +233,7 @@ const AdminHome = () => {
       </div>
 
       {/* Styles remain unchanged */}
-      <style jsx>{`
+      <style>{`
         .admin-home {
           max-width: 1200px;
           margin: 0 auto;
@@ -255,8 +256,8 @@ const AdminHome = () => {
         }
 
         .stats-grid {
-          display: flex;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
           gap: 24px;
           margin-bottom: 32px;
         }
@@ -328,7 +329,7 @@ const AdminHome = () => {
 
         .dashboard-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
           gap: 24px;
         }
 

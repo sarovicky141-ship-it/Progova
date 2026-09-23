@@ -9,6 +9,8 @@ import {
   Users,
   Calendar,
 } from "lucide-react";
+import { apiFetch } from "../../lib/api";
+import FormIllustration from "../../components/shared/FormIllustration";
 
 const PlacementManagement = () => {
   const [placements, setPlacements] = useState([]);
@@ -16,7 +18,7 @@ const PlacementManagement = () => {
   useEffect(() => {
     const fetchPlacements = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/placements");
+        const res = await apiFetch("/api/placements");
         if (!res.ok) throw new Error("Failed to fetch placements");
         const data = await res.json();
         setPlacements(data.data || []);
@@ -46,20 +48,19 @@ const PlacementManagement = () => {
     e.preventDefault();
     const placement = {
       ...newPlacement,
-      id: Date.now(),
       status: "Active",
       applicants: 0,
     };
 
     try {
-      const res = await fetch("http://localhost:3000/api/placements", {
+      const res = await apiFetch("/api/placements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(placement),
       });
       if (!res.ok) throw new Error("Failed to add placement");
-      // Update local state if backend call succeeds
-      setPlacements([...placements, placement]);
+      const result = await res.json();
+      setPlacements([...placements, result.data]);
       resetForm();
     } catch (error) {
       console.error(error);
@@ -76,8 +77,8 @@ const PlacementManagement = () => {
   const handleUpdatePlacement = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(
-        `http://localhost:3000/api/placements/${editingPlacement.id}`,
+      const res = await apiFetch(
+        `/api/placements/${editingPlacement.id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -102,7 +103,7 @@ const PlacementManagement = () => {
   const handleDeletePlacement = async (id) => {
     if (confirm("Are you sure you want to delete this placement?")) {
       try {
-        const res = await fetch(`http://localhost:3000/api/placements/${id}`, {
+        const res = await apiFetch(`/api/placements/${id}`, {
           method: "DELETE",
         });
         if (!res.ok) throw new Error("Failed to delete placement");
@@ -298,7 +299,7 @@ const PlacementManagement = () => {
       {/* Add/Edit Placement Modal */}
       {showAddForm && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal progova-form-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>
                 <Briefcase size={24} />
@@ -313,6 +314,8 @@ const PlacementManagement = () => {
                 editingPlacement ? handleUpdatePlacement : handleAddPlacement
               }
             >
+              <div className="progova-form-layout">
+              <div className="progova-form-fields">
               <div className="form-grid">
                 <div className="form-group">
                   <label className="form-label">Company Name</label>
@@ -448,6 +451,9 @@ const PlacementManagement = () => {
                   {editingPlacement ? "Update Placement" : "Add Placement"}
                 </button>
               </div>
+              </div>
+              <FormIllustration variant="placement" />
+              </div>
             </form>
           </div>
         </div>
@@ -526,10 +532,11 @@ const PlacementManagement = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .placement-management {
           max-width: 1200px;
-          width: 1000px;
+          width: 100%;
+          max-width: 100%;
           margin: 0 auto;
         }
 
@@ -607,7 +614,7 @@ const PlacementManagement = () => {
 
         .placements-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
           gap: 24px;
         }
 
@@ -676,7 +683,7 @@ const PlacementManagement = () => {
 
         .placement-details {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 12px;
           margin-bottom: 16px;
         }

@@ -9,6 +9,7 @@ import {
   Clock,
   Building,
 } from "lucide-react";
+import { apiFetch } from "../../lib/api";
 
 const StudentPlacements = () => {
   const [filterType, setFilterType] = useState("all");
@@ -18,7 +19,7 @@ const StudentPlacements = () => {
   useEffect(() => {
     const fetchPlacements = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/placements");
+        const res = await apiFetch("/api/placements");
         if (!res.ok) throw new Error("Failed to fetch placements");
         const data = await res.json();
         setPlacements(data.data || []);
@@ -41,8 +42,8 @@ const StudentPlacements = () => {
   const handleApply = async (placementId) => {
     if (!appliedJobs.includes(placementId)) {
       try {
-        const res = await fetch(
-          `http://localhost:3000/api/placements/${placementId}/apply`,
+        const res = await apiFetch(
+          `/api/placements/${placementId}/apply`,
           { method: "PUT" }
         );
         if (!res.ok) throw new Error("Failed to apply");
@@ -257,10 +258,11 @@ const StudentPlacements = () => {
           </p>
         </div>
       )}
-      <style jsx>{`
+      <style>{`
         .student-placements {
           max-width: 1200px;
-          width: 1000px;
+          width: 100%;
+          max-width: 100%;
           margin: 0 auto;
         }
 
@@ -368,7 +370,7 @@ const StudentPlacements = () => {
 
         .placements-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
           gap: 24px;
           margin-bottom: 32px;
         }
@@ -456,7 +458,7 @@ const StudentPlacements = () => {
 
         .placement-details {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 12px;
           margin-bottom: 16px;
         }
@@ -543,7 +545,7 @@ const StudentPlacements = () => {
 
         @media (max-width: 768px) {
           .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
           }
 
           .placements-grid {

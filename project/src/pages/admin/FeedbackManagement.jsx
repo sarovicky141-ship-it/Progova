@@ -7,6 +7,7 @@ import {
   Filter,
   TrendingUp,
 } from "lucide-react";
+import { apiFetch } from "../../lib/api";
 
 const FeedbackManagement = () => {
   const [feedback, setFeedback] = useState([]);
@@ -14,7 +15,7 @@ const FeedbackManagement = () => {
   useEffect(() => {
     const fetchFeedbacks = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/feedbacks");
+        const res = await apiFetch("/api/feedbacks");
         if (!res.ok) throw new Error("Failed to fetch feedbacks");
         const data = await res.json();
         setFeedback(data.data || []);
@@ -50,8 +51,8 @@ const FeedbackManagement = () => {
   const handleDeleteFeedback = async (id) => {
     if (confirm("Are you sure you want to delete this feedback?")) {
       try {
-        const response = await fetch(
-          `http://localhost:3000/api/feedbacks/${id}`,
+        const response = await apiFetch(
+          `/api/feedbacks/${id}`,
           {
             method: "DELETE",
           }
@@ -340,10 +341,11 @@ const FeedbackManagement = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .feedback-management {
           max-width: 1200px;
-          width: 1000px;
+          width: 100%;
+          max-width: 100%;
           margin: 0 auto;
         }
 

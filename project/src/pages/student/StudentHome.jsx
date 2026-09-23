@@ -1,3 +1,4 @@
+import { apiFetch } from "../../lib/api";
 import { React, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -89,7 +90,7 @@ const StudentHome = () => {
 
   const fetchAnnouncements = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/announcements");
+      const response = await apiFetch("/api/announcements");
       console.log(response);
 
       if (!response.ok) {
@@ -247,10 +248,11 @@ const StudentHome = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .student-home {
           max-width: 1200px;
-          width: 1000px;
+          width: 100%;
+          max-width: 100%;
           margin: 0 auto;
         }
 
@@ -370,7 +372,7 @@ const StudentHome = () => {
 
         .dashboard-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
           gap: 24px;
           margin-bottom: 32px;
         }
@@ -442,7 +444,7 @@ const StudentHome = () => {
           height: 6px;
           background-color: #e5e7eb;
           border-radius: 3px;
-          overflow: hidden;
+          overflow-x: auto;
         }
 
         .progress-fill {

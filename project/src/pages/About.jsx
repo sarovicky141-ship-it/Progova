@@ -145,7 +145,7 @@ const About = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .about-page {
           min-height: 100vh;
           background-color: #f8fafc;
@@ -447,7 +447,7 @@ const About = () => {
           }
 
           .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
           }
 
           .mission-points {

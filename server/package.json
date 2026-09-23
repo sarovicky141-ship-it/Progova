@@ -5,14 +5,15 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-  "dev": "nodemon index.js",
-  "start": "node index.js",
-  "test": "echo \"Error: no test specified\" && exit 1"
-},
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "firebase": "^12.3.0",
     "firebase-admin": "^13.5.0",

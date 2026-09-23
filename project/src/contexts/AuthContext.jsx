@@ -1,12 +1,30 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+} from "react";
+
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
+
+import { doc, getDoc } from "firebase/firestore";
+
+import { auth, db } from "../../libs/firebase";
 
 const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
+
   return context;
 };
 
@@ -14,70 +32,128 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Mock users for demonstration
-  const mockUsers = [
-    {
-      id: "admin001",
-      password: "admin123",
-      role: "admin",
-      name: "Tamil",
-      email: "admin@progova.com",
-    },
-    {
-      id: "admin002",
-      password: "admin124",
-      role: "admin",
-      name: "Saro",
-      email: "admin@progova.com",
-    },
-    {
-      id: "ST001",
-      password: "student123",
-      role: "student",
-      name: "selva",
-      email: "alice@student.com",
-      course: "Computer Science",
-      semester: 6,
-      rollNumber: "CS2021001",
-    },
-    {
-      id: "ST002",
-      password: "student123",
-      role: "student",
-      name: "Guna",
-      email: "bob@student.com",
-      course: "Electronics",
-      semester: 4,
-      rollNumber: "EC2022002",
-    },
-  ];
-
-  useEffect(() => {
-    // Check if user is logged in from localStorage
-    const savedUser = localStorage.getItem("progovaUser");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+  const syncUserProfile = useCallback(async (firebaseUser) => {
+    if (!firebaseUser) {
+      setUser(null);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    try {
+      const userRef = doc(db, "users", firebaseUser.uid);
+      const userSnapshot = await getDoc(userRef);
+
+      if (!userSnapshot.exists()) {
+        console.error(
+          `No Firestore profile found for Firebase user ${firebaseUser.uid}.`
+        );
+        await signOut(auth);
+        setUser(null);
+        return;
+      }
+
+      const profile = userSnapshot.data();
+      if (!["admin", "student"].includes(profile.role)) {
+        console.error(`Invalid role for Firebase user ${firebaseUser.uid}.`);
+        await signOut(auth);
+        setUser(null);
+        return;
+      }
+
+      setUser({
+        uid: firebaseUser.uid,
+        email: firebaseUser.email || profile.email || null,
+        name: profile.name || firebaseUser.displayName || null,
+        role: profile.role || null,
+        ...profile,
+      });
+    } catch (error) {
+      console.error("Error loading user profile:", error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const login = (id, password) => {
-    const foundUser = mockUsers.find(
-      (u) => u.id === id && u.password === password
-    );
-    if (foundUser) {
-      const userWithoutPassword = { ...foundUser };
-      delete userWithoutPassword.password;
-      setUser(userWithoutPassword);
-      localStorage.setItem("progovaUser", JSON.stringify(userWithoutPassword));
-      return { success: true };
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        syncUserProfile(firebaseUser);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [syncUserProfile]);
+
+  const login = async (email, password) => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      const firebaseUser = userCredential.user;
+      const userRef = doc(db, "users", firebaseUser.uid);
+      const userSnapshot = await getDoc(userRef);
+
+      if (!userSnapshot.exists()) {
+        console.error(
+          `Login failed: Firestore profile missing for UID ${firebaseUser.uid}`
+        );
+        await signOut(auth);
+
+        return {
+          success: false,
+          error: "Your account profile was not found. Please contact admin.",
+        };
+      }
+
+      const profile = userSnapshot.data();
+      if (!["admin", "student"].includes(profile.role)) {
+        await signOut(auth);
+        return {
+          success: false,
+          error: "Your account has an invalid role. Please contact admin.",
+        };
+      }
+      const loggedInUser = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email || profile.email || null,
+        name: profile.name || firebaseUser.displayName || null,
+        role: profile.role || null,
+        ...profile,
+      };
+
+      setUser(loggedInUser);
+      setLoading(false);
+
+      return {
+        success: true,
+        user: loggedInUser,
+      };
+    } catch (error) {
+      console.error("Login error:", error);
+
+      return {
+        success: false,
+        error: "Invalid email or password.",
+      };
     }
-    return { success: false, error: "Invalid credentials" };
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("progovaUser");
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      return { success: true };
+    } catch (error) {
+      console.error("Logout error:", error);
+      return { success: false, error: error.message };
+    }
   };
 
   const value = {
@@ -87,5 +163,9 @@ export const AuthProvider = ({ children }) => {
     loading,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };

@@ -9,6 +9,7 @@ import {
   Clock,
   AlertCircle,
 } from "lucide-react";
+import { apiFetch } from "../../lib/api";
 
 const StudentNotifications = () => {
   const [notifications, setNotifications] = useState([]); // Start with empty array
@@ -17,7 +18,7 @@ const StudentNotifications = () => {
     // Fetch messages from backend API on mount
     const fetchMessages = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/messages");
+        const response = await apiFetch("/api/messages");
         if (!response.ok) {
           throw new Error("Failed to fetch messages");
         }
@@ -283,10 +284,10 @@ const StudentNotifications = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .student-notifications {
           max-width: 1000px;
-          width: 1000px;
+          width: 100%;
           margin: 0 auto;
         }
 
@@ -552,7 +553,7 @@ const StudentNotifications = () => {
 
         @media (max-width: 768px) {
           .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
           }
 
           .notification-controls {

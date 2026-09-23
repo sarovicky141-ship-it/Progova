@@ -4,9 +4,9 @@ import {
   Users,
   CheckCircle,
   XCircle,
-  Filter,
   Download,
 } from "lucide-react";
+import { apiFetch } from "../../lib/api";
 
 const AttendanceManagement = () => {
   const [selectedDate, setSelectedDate] = useState(
@@ -14,23 +14,37 @@ const AttendanceManagement = () => {
   );
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedSemester, setSelectedSemester] = useState("");
+  const [students, setStudents] = useState([]);
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
 
-  const [attendance, setAttendance] = useState([]);
   useEffect(() => {
     fetchStudents();
   }, []);
 
+  useEffect(() => {
+    fetchAttendanceForDate(selectedDate);
+  }, [selectedDate]);
+
   const fetchStudents = async () => {
     try {
-      const response = await fetch("http://localhost:3000/api/students");
+      const response = await apiFetch("/api/students");
       if (!response.ok) throw new Error("Failed to fetch students");
       const data = await response.json();
-      setAttendance(data.data);
-      ////data.data);
+      setStudents(data.data || []);
     } catch (error) {
-      ////"skkk");
-
       alert(error.message);
+    }
+  };
+
+  const fetchAttendanceForDate = async (date) => {
+    try {
+      const response = await apiFetch(`/api/attendance?date=${date}`);
+      if (!response.ok) throw new Error("Failed to fetch attendance");
+      const data = await response.json();
+      setAttendanceRecords(data.data || []);
+    } catch (error) {
+      console.error(error);
+      setAttendanceRecords([]);
     }
   };
 
@@ -43,38 +57,55 @@ const AttendanceManagement = () => {
   ];
   const semesters = [1, 2, 3, 4, 5, 6, 7, 8];
 
-  const filteredAttendance = attendance.filter((record) => {
+  const mergedAttendance = students.map((student) => {
+    const attendanceEntry = attendanceRecords.find(
+      (record) => record.studentId === student.id
+    );
+
+    return {
+      ...student,
+      status: attendanceEntry ? attendanceEntry.status : "Not Marked",
+      checkInTime: attendanceEntry?.checkInTime || "",
+    };
+  });
+
+  const filteredAttendance = mergedAttendance.filter((record) => {
     if (selectedCourse && record.course !== selectedCourse) return false;
     if (selectedSemester && record.semester !== parseInt(selectedSemester))
       return false;
     return true;
   });
 
-  const handleStatusChange = async (id, newStatus) => {
-    // Update local state first
-    setAttendance(
-      attendance.map((record) =>
-        record.id === id ? { ...record, status: newStatus } : record
-      )
-    );
-
-    // Call backend API to update database
+  const handleStatusChange = async (studentId, newStatus) => {
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/students/${id}/status`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
+      const response = await apiFetch(`/api/attendance/${studentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: selectedDate, status: newStatus }),
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to update status on server");
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update attendance");
       }
+
+      const updatedRecord = await response.json();
+      setAttendanceRecords((prev) => {
+        const existingIndex = prev.findIndex(
+          (record) => record.studentId === studentId
+        );
+
+        if (existingIndex >= 0) {
+          const revised = [...prev];
+          revised[existingIndex] = updatedRecord.data;
+          return revised;
+        }
+
+        return [...prev, updatedRecord.data];
+      });
     } catch (error) {
       console.error(error);
-      // Optional: revert state change or show error to user
+      alert(error.message);
     }
   };
 
@@ -87,10 +118,14 @@ const AttendanceManagement = () => {
       (r) => r.status === "Absent"
     ).length;
     const late = filteredAttendance.filter((r) => r.status === "Late").length;
+    const notMarked = filteredAttendance.filter(
+      (r) => r.status === "Not Marked"
+    ).length;
+    const markedTotal = present + absent + late;
     const percentage =
-      total > 0 ? (((present + late) / total) * 100).toFixed(1) : 0;
+      markedTotal > 0 ? (((present + late) / markedTotal) * 100).toFixed(1) : 0;
 
-    return { total, present, absent, late, percentage };
+    return { total, present, absent, late, notMarked, percentage };
   };
 
   const stats = getAttendanceStats();
@@ -135,7 +170,6 @@ const AttendanceManagement = () => {
         <p>Track and manage student attendance records</p>
       </div>
 
-      {/* Attendance Stats */}
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon total">
@@ -169,7 +203,7 @@ const AttendanceManagement = () => {
             <Calendar size={24} />
           </div>
           <div className="stat-content">
-            <h3>{stats.percentage}%</h3>
+            <h3>{stats.percentage || 0}%</h3>
             <p>Attendance Rate</p>
           </div>
         </div>
@@ -290,10 +324,11 @@ const AttendanceManagement = () => {
         </table>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .attendance-management {
           max-width: 1200px;
-          width: 1000px;
+          width: 100%;
+          max-width: 100%;
           margin: 0 auto;
         }
 
@@ -400,7 +435,7 @@ const AttendanceManagement = () => {
         .attendance-table-container {
           background: white;
           border-radius: 12px;
-          overflow: hidden;
+          overflow-x: auto;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           border: 1px solid #e5e7eb;
         }
@@ -471,7 +506,7 @@ const AttendanceManagement = () => {
 
         @media (max-width: 768px) {
           .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
           }
 
           .attendance-controls {

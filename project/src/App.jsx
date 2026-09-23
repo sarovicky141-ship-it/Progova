@@ -6,14 +6,16 @@ import StudentDashboard from './pages/student/StudentDashboard'
 import About from './pages/About'
 import Contact from './pages/Contact'
 import ProtectedRoute from './components/ProtectedRoute'
+import { ThemeProvider } from './contexts/ThemeContext'
 import './App.css'
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="app">
-          <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <div className="app">
+            <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/about" element={<About />} />
@@ -34,10 +36,11 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 

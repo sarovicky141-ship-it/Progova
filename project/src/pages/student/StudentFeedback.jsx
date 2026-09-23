@@ -7,6 +7,8 @@ import {
   Clock,
   Plus,
 } from "lucide-react";
+import { apiFetch } from "../../lib/api";
+import FormIllustration from "../../components/shared/FormIllustration";
 
 const StudentFeedback = () => {
   const [feedback, setFeedback] = useState([]);
@@ -14,7 +16,7 @@ const StudentFeedback = () => {
   useEffect(() => {
     const fetchFeedbacks = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/feedbacks");
+        const res = await apiFetch("/api/feedbacks");
         if (!res.ok) throw new Error("Failed to fetch feedbacks");
         const data = await res.json();
 
@@ -47,7 +49,7 @@ const StudentFeedback = () => {
 
     // Send feedback_item to your backend API
     try {
-      const response = await fetch("http://localhost:3000/api/feedbacks", {
+      const response = await apiFetch("/api/feedbacks", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -232,7 +234,7 @@ const StudentFeedback = () => {
       {/* Submit Feedback Modal */}
       {showFeedbackForm && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal progova-form-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>
                 <Send size={24} />
@@ -243,6 +245,8 @@ const StudentFeedback = () => {
               </button>
             </div>
             <form onSubmit={handleSubmitFeedback}>
+              <div className="progova-form-layout">
+              <div className="progova-form-fields">
               <div className="form-content">
                 <div className="form-group">
                   <label className="form-label">Feedback Type</label>
@@ -319,15 +323,18 @@ const StudentFeedback = () => {
                   Submit Feedback
                 </button>
               </div>
+              </div>
+              <FormIllustration variant="feedback" />
+              </div>
             </form>
           </div>
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .student-feedback {
           max-width: 1000px;
-          width: 1000px;
+          width: 100%;
           margin: 0 auto;
         }
 
