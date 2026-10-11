@@ -18,6 +18,20 @@ import { auth, db } from "../../libs/firebase";
 
 const AuthContext = createContext();
 
+const logFirebaseErrorCode = (stage, error) => {
+  const code =
+    error && typeof error.code === "string" ? error.code : "unknown";
+  console.error(`${stage} failed (Firebase error code: ${code})`);
+};
+
+const signOutAfterLoginFailure = async (stage) => {
+  try {
+    await signOut(auth);
+  } catch (error) {
+    logFirebaseErrorCode(stage, error);
+  }
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
 
@@ -44,18 +58,16 @@ export const AuthProvider = ({ children }) => {
       const userSnapshot = await getDoc(userRef);
 
       if (!userSnapshot.exists()) {
-        console.error(
-          `No Firestore profile found for Firebase user ${firebaseUser.uid}.`
-        );
-        await signOut(auth);
+        console.error("No Firestore profile found for authenticated user.");
+        await signOutAfterLoginFailure("Sign-out after missing profile");
         setUser(null);
         return;
       }
 
       const profile = userSnapshot.data();
       if (!["admin", "student"].includes(profile.role)) {
-        console.error(`Invalid role for Firebase user ${firebaseUser.uid}.`);
-        await signOut(auth);
+        console.error("Authenticated user has an invalid Firestore role.");
+        await signOutAfterLoginFailure("Sign-out after invalid role");
         setUser(null);
         return;
       }
@@ -68,7 +80,7 @@ export const AuthProvider = ({ children }) => {
         ...profile,
       });
     } catch (error) {
-      console.error("Error loading user profile:", error);
+      logFirebaseErrorCode("Authentication-state profile lookup", error);
       setUser(null);
     } finally {
       setLoading(false);
@@ -89,60 +101,73 @@ export const AuthProvider = ({ children }) => {
   }, [syncUserProfile]);
 
   const login = async (email, password) => {
+    let firebaseUser;
+
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
-        email,
+        email.trim(),
         password
       );
-
-      const firebaseUser = userCredential.user;
-      const userRef = doc(db, "users", firebaseUser.uid);
-      const userSnapshot = await getDoc(userRef);
-
-      if (!userSnapshot.exists()) {
-        console.error(
-          `Login failed: Firestore profile missing for UID ${firebaseUser.uid}`
-        );
-        await signOut(auth);
-
-        return {
-          success: false,
-          error: "Your account profile was not found. Please contact admin.",
-        };
-      }
-
-      const profile = userSnapshot.data();
-      if (!["admin", "student"].includes(profile.role)) {
-        await signOut(auth);
-        return {
-          success: false,
-          error: "Your account has an invalid role. Please contact admin.",
-        };
-      }
-      const loggedInUser = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email || profile.email || null,
-        name: profile.name || firebaseUser.displayName || null,
-        role: profile.role || null,
-        ...profile,
-      };
-
-      setUser(loggedInUser);
-      setLoading(false);
-
-      return {
-        success: true,
-        user: loggedInUser,
-      };
+      firebaseUser = userCredential.user;
     } catch (error) {
-      console.error("Login error:", error);
+      logFirebaseErrorCode("Firebase sign-in", error);
 
       return {
         success: false,
         error: "Invalid email or password.",
       };
     }
+
+    let profileSnapshot;
+    try {
+      profileSnapshot = await getDoc(doc(db, "users", firebaseUser.uid));
+    } catch (error) {
+      logFirebaseErrorCode("Login Firestore profile lookup", error);
+      await signOutAfterLoginFailure("Sign-out after profile lookup failure");
+      setUser(null);
+      return {
+        success: false,
+        error: "Unable to load your account profile. Please try again.",
+      };
+    }
+
+    if (!profileSnapshot.exists()) {
+      console.error("Login failed: Firestore profile is missing.");
+      await signOutAfterLoginFailure("Sign-out after missing profile");
+      setUser(null);
+      return {
+        success: false,
+        error: "Your account profile was not found. Please contact admin.",
+      };
+    }
+
+    const profile = profileSnapshot.data();
+    if (!["admin", "student"].includes(profile.role)) {
+      console.error("Login failed: Firestore profile has an invalid role.");
+      await signOutAfterLoginFailure("Sign-out after invalid role");
+      setUser(null);
+      return {
+        success: false,
+        error: "Your account has an invalid role. Please contact admin.",
+      };
+    }
+
+    const loggedInUser = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email || profile.email || null,
+      name: profile.name || firebaseUser.displayName || null,
+      role: profile.role || null,
+      ...profile,
+    };
+
+    setUser(loggedInUser);
+    setLoading(false);
+
+    return {
+      success: true,
+      user: loggedInUser,
+    };
   };
 
   const logout = async () => {

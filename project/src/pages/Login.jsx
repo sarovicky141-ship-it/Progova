@@ -43,6 +43,25 @@ const Login = () => {
             <button type="submit" className="btn btn-primary login-btn" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</button>
           </form>
         </div>
+        <aside className="demo-credentials" aria-labelledby="demo-credentials-title">
+          <div className="demo-credentials-heading">
+            <span className="demo-access-badge">Demo Access</span>
+            <h2 id="demo-credentials-title">Demo Credentials</h2>
+          </div>
+          <div className="demo-credentials-list">
+            <section className="demo-credential-section" aria-labelledby="demo-admin-title">
+              <h3 id="demo-admin-title">Admin</h3>
+              <p><span>Email:</span> admin1@progova.com</p>
+              <p><span>Password:</span> Admin@Progova1</p>
+            </section>
+            <section className="demo-credential-section" aria-labelledby="demo-student-title">
+              <h3 id="demo-student-title">Student</h3>
+              <p><span>Email:</span> cs01-001@progova-demo.com</p>
+              <p><span>Password:</span> Progova@CS01-001</p>
+            </section>
+          </div>
+          <p className="demo-data-note">Demo data is read-only. Please do not alter, delete, or modify any records.</p>
+        </aside>
         <footer className="login-footer"><div className="footer-links"><Link to="/about" className="footer-link">About</Link><Link to="/contact" className="footer-link">Contact</Link></div><p>&copy; 2024 Progova. All rights reserved.</p></footer>
       </main>
     </div>

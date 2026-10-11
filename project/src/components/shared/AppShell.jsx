@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Bell, GraduationCap, LogOut, Menu, Moon, Sun, X } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
+import ChatWidget from './ChatWidget'
 import './AppShell.css'
 
 const AppShell = ({ children, role, navItems }) => {
@@ -88,6 +89,8 @@ const AppShell = ({ children, role, navItems }) => {
         </div>
         <div className="shell-content">{children}</div>
       </main>
+
+      <ChatWidget />
     </div>
   )
 }

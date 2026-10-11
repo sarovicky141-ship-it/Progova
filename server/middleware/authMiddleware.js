@@ -1,5 +1,6 @@
 import { getAuth } from "firebase-admin/auth";
 import { db } from "../libs/firebase.js";
+import { createVerifiedRequestUser } from "../security/access.js";
 
 export const requireAuth = async (req, res, next) => {
   try {
@@ -21,18 +22,17 @@ export const requireAuth = async (req, res, next) => {
       });
     }
 
-    const profile = profileSnapshot.data();
-    if (!["admin", "student"].includes(profile.role)) {
+    const user = createVerifiedRequestUser(
+      decodedToken,
+      profileSnapshot.data()
+    );
+    if (!user) {
       return res.status(403).json({
         error: "User account is not authorized.",
       });
     }
 
-    req.user = {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-      ...profile,
-    };
+    req.user = user;
 
     return next();
   } catch (error) {

@@ -6,6 +6,7 @@ import FormIllustration from "../../components/shared/FormIllustration";
 const MessageCenter = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [messages, setMessages] = useState([]); // Start with empty array
+  const [students, setStudents] = useState([]);
 
   useEffect(() => {
     // Fetch messages from backend API on mount
@@ -29,6 +30,23 @@ const MessageCenter = () => {
     fetchAnnouncements();
   }, []);
 
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const response = await apiFetch("/api/students");
+        if (!response.ok) {
+          throw new Error("Failed to fetch students");
+        }
+        const data = await response.json();
+        setStudents(data.data || []);
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    fetchStudents();
+  }, []);
+
   const fetchAnnouncements = async () => {
     try {
       const response = await apiFetch("/api/announcements");
@@ -48,7 +66,8 @@ const MessageCenter = () => {
   const [newMessage, setNewMessage] = useState({
     title: "",
     content: "",
-    recipients: "",
+    audienceType: "",
+    recipientUids: [],
     priority: "Normal",
   });
   const [newAnnouncement, setNewAnnouncement] = useState({
@@ -64,7 +83,18 @@ const MessageCenter = () => {
       const response = await apiFetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newMessage),
+        body: JSON.stringify({
+          title: newMessage.title,
+          content: newMessage.content,
+          priority: newMessage.priority,
+          audience:
+            newMessage.audienceType === "broadcast"
+              ? { type: "broadcast" }
+              : {
+                  type: newMessage.audienceType,
+                  recipientUids: newMessage.recipientUids,
+                },
+        }),
       });
 
       if (!response.ok) {
@@ -78,7 +108,8 @@ const MessageCenter = () => {
       setNewMessage({
         title: "",
         content: "",
-        recipients: "",
+        audienceType: "",
+        recipientUids: [],
         priority: "Normal",
       });
       setShowMessageForm(false);
@@ -182,7 +213,8 @@ const MessageCenter = () => {
     setNewMessage({
       title: "",
       content: "",
-      recipients: "",
+      audienceType: "",
+      recipientUids: [],
       priority: "Normal",
     });
     setNewAnnouncement({
@@ -339,37 +371,65 @@ const MessageCenter = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Recipients</label>
+                  <label className="form-label">Audience</label>
                   <select
                     className="form-select"
-                    value={newMessage.recipients}
+                    value={newMessage.audienceType}
                     onChange={(e) =>
                       setNewMessage({
                         ...newMessage,
-                        recipients: e.target.value,
+                        audienceType: e.target.value,
+                        recipientUids: [],
                       })
                     }
                     required
                   >
-                    <option value="">Select Recipients</option>
-                    <option value="All Students">All Students</option>
-                    <option value="Final Year Students">
-                      Final Year Students
-                    </option>
-                    <option value="Computer Science Students">
-                      Computer Science Students
-                    </option>
-                    <option value="Electronics Students">
-                      Electronics Students
-                    </option>
-                    <option value="Mechanical Students">
-                      Mechanical Students
-                    </option>
-                    <option value="Placement Eligible Students">
-                      Placement Eligible Students
-                    </option>
+                    <option value="">Select Audience</option>
+                    <option value="broadcast">All Students (Broadcast)</option>
+                    <option value="individual">One Student</option>
+                    <option value="group">Selected Students (Group)</option>
                   </select>
                 </div>
+                {["individual", "group"].includes(newMessage.audienceType) && (
+                  <div className="form-group">
+                    <label className="form-label">Student Recipients</label>
+                    <select
+                      className="form-select"
+                      multiple={newMessage.audienceType === "group"}
+                      size={newMessage.audienceType === "group" ? 6 : undefined}
+                      value={
+                        newMessage.audienceType === "group"
+                          ? newMessage.recipientUids
+                          : newMessage.recipientUids[0] || ""
+                      }
+                      onChange={(e) => {
+                        const selectedUids = Array.from(
+                          e.target.selectedOptions,
+                          (option) => option.value
+                        );
+                        setNewMessage({
+                          ...newMessage,
+                          recipientUids:
+                            newMessage.audienceType === "individual"
+                              ? selectedUids.slice(0, 1)
+                              : selectedUids,
+                        });
+                      }}
+                      required
+                    >
+                      {students
+                        .filter((student) => student.uid)
+                        .map((student) => (
+                          <option key={student.uid} value={student.uid}>
+                            {student.name || student.email}{" "}
+                            {student.rollNumber
+                              ? `(${student.rollNumber})`
+                              : ""}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label">Priority</label>
                   <select
