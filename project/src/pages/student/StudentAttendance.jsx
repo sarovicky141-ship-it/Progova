@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Calendar, TrendingUp, CheckCircle, XCircle, Clock } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { apiFetch } from '../../lib/api'
+import { apiFetch, isApiRequestInterrupted } from '../../lib/api'
 
 const StudentAttendance = () => {
   const { user } = useAuth()
@@ -11,27 +11,41 @@ const StudentAttendance = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+
     const fetchStudentAttendance = async () => {
       if (!user?.studentId) {
-        setAttendanceData([])
-        setLoading(false)
+        if (active) {
+          setAttendanceData([])
+          setLoading(false)
+        }
         return
       }
 
       try {
-        const response = await apiFetch(`/api/attendance/student/${user.studentId}`)
+        const response = await apiFetch(`/api/attendance/student/${user.studentId}`, {
+          signal: controller.signal,
+        })
         if (!response.ok) throw new Error('Failed to fetch attendance')
         const data = await response.json()
-        setAttendanceData(data.data || [])
+        if (active) setAttendanceData(data.data || [])
       } catch (error) {
-        console.error(error)
-        setAttendanceData([])
+        if (active && !isApiRequestInterrupted(error)) {
+          console.error(error)
+          setAttendanceData([])
+        }
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
 
     fetchStudentAttendance()
+
+    return () => {
+      active = false
+      controller.abort()
+    }
   }, [user])
 
   const attendanceSummary = attendanceData.reduce((summary, record) => {

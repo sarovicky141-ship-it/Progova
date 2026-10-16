@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MessageCircleMore, SendHorizontal, Sparkles, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 import "./ChatWidget.css";
 
 const welcomeMessage = {
@@ -79,12 +79,18 @@ const ChatWidget = () => {
   const [draft, setDraft] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
+  const requestController = useRef(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isOpen, isLoading]);
+
+  useEffect(
+    () => () => requestController.current?.abort(),
+    []
+  );
 
   if (!user) {
     return null;
@@ -108,10 +114,15 @@ const ChatWidget = () => {
     setDraft("");
     setIsLoading(true);
 
+    const controller = new AbortController();
+    requestController.current = controller;
+    let interrupted = false;
+
     try {
       const response = await apiFetch("/api/chat", {
         method: "POST",
         body: JSON.stringify({ message: trimmedMessage }),
+        signal: controller.signal,
       });
 
       let payload = null;
@@ -136,17 +147,23 @@ const ChatWidget = () => {
           text: formattedData ? `${replyText}\n\n${formattedData}` : replyText,
         },
       ]);
-    } catch {
-      setMessages((previousMessages) => [
-        ...previousMessages,
-        {
-          id: `error-${Date.now()}`,
-          sender: "assistant",
-          text: "Sorry, I couldn't process that request. Please try again.",
-        },
-      ]);
+    } catch (error) {
+      interrupted = isApiRequestInterrupted(error);
+      if (!controller.signal.aborted && !interrupted) {
+        setMessages((previousMessages) => [
+          ...previousMessages,
+          {
+            id: `error-${Date.now()}`,
+            sender: "assistant",
+            text: "Sorry, I couldn't process that request. Please try again.",
+          },
+        ]);
+      }
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted && !interrupted) setIsLoading(false);
+      if (requestController.current === controller) {
+        requestController.current = null;
+      }
     }
   };
 

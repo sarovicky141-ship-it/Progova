@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Send, Plus, Users, Bell, Mail, Trash2 } from "lucide-react";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 import FormIllustration from "../../components/shared/FormIllustration";
 
 const MessageCenter = () => {
@@ -9,55 +9,81 @@ const MessageCenter = () => {
   const [students, setStudents] = useState([]);
 
   useEffect(() => {
-    // Fetch messages from backend API on mount
+    const controller = new AbortController();
+    let active = true;
     const fetchMessages = async () => {
       try {
-        const response = await apiFetch("/api/messages");
+        const response = await apiFetch("/api/messages", {
+          signal: controller.signal,
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch messages");
         }
         const data = await response.json();
-        setMessages(data.data || []); // Set the messages from API response
+        if (active) setMessages(data.data || []);
       } catch (error) {
-        alert(error.message);
+        if (active && !isApiRequestInterrupted(error)) {
+          alert(error.message);
+        }
       }
     };
 
     fetchMessages();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
   useEffect(() => {
-    fetchAnnouncements();
+    const controller = new AbortController();
+    fetchAnnouncements(controller.signal);
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
     const fetchStudents = async () => {
       try {
-        const response = await apiFetch("/api/students");
+        const response = await apiFetch("/api/students", {
+          signal: controller.signal,
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch students");
         }
         const data = await response.json();
-        setStudents(data.data || []);
+        if (active) setStudents(data.data || []);
       } catch (error) {
-        alert(error.message);
+        if (active && !isApiRequestInterrupted(error)) {
+          alert(error.message);
+        }
       }
     };
 
     fetchStudents();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = async (signal) => {
     try {
-      const response = await apiFetch("/api/announcements");
+      const response = await apiFetch("/api/announcements", { signal });
       if (!response.ok) {
         throw new Error("Failed to fetch announcements");
       }
       const data = await response.json();
       // Assuming backend returns announcements as an array in data field
-      setAnnouncements(data.data || data);
+      if (!signal.aborted) setAnnouncements(data.data || data);
     } catch (error) {
-      alert(error.message);
+      if (!signal.aborted && !isApiRequestInterrupted(error)) {
+        alert(error.message);
+      }
     }
   };
 

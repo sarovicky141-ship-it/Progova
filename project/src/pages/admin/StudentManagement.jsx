@@ -1,23 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { Search, Plus, Edit, Trash2, Eye, EyeOff, UserPlus } from "lucide-react";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 import FormIllustration from "../../components/shared/FormIllustration";
 import "./StudentManagement.css";
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
   useEffect(() => {
-    fetchStudents();
+    const controller = new AbortController();
+    fetchStudents(controller.signal);
+
+    return () => controller.abort();
   }, []);
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (signal) => {
     try {
-      const response = await apiFetch("/api/students");
+      const response = await apiFetch("/api/students", { signal });
       if (!response.ok) throw new Error("Failed to fetch students");
       const data = await response.json();
-      setStudents(data.data);
+      if (!signal.aborted) setStudents(data.data);
     } catch (error) {
-      alert(error.message);
+      if (!signal.aborted && !isApiRequestInterrupted(error)) {
+        alert(error.message);
+      }
     }
   };
 

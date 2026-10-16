@@ -9,26 +9,41 @@ import {
   Users,
   Calendar,
 } from "lucide-react";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 import FormIllustration from "../../components/shared/FormIllustration";
+import { useAuth } from "../../contexts/AuthContext";
 
 const PlacementManagement = () => {
+  const { user } = useAuth();
   const [placements, setPlacements] = useState([]);
 
   useEffect(() => {
+    if (user?.role !== "admin") return undefined;
+
+    const controller = new AbortController();
+    let active = true;
     const fetchPlacements = async () => {
       try {
-        const res = await apiFetch("/api/placements");
+        const res = await apiFetch("/api/placements", {
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error("Failed to fetch placements");
         const data = await res.json();
-        setPlacements(data.data || []);
+        if (active) setPlacements(data.data || []);
         console.log(data);
       } catch (e) {
-        console.error(e);
+        if (active && !isApiRequestInterrupted(e)) {
+          console.error(e);
+        }
       }
     };
     fetchPlacements();
-  }, []);
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [user?.role, user?.uid]);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPlacement, setEditingPlacement] = useState(null);

@@ -7,26 +7,37 @@ import {
   Clock,
   Plus,
 } from "lucide-react";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 import FormIllustration from "../../components/shared/FormIllustration";
 
 const StudentFeedback = () => {
   const [feedback, setFeedback] = useState([]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
     const fetchFeedbacks = async () => {
       try {
-        const res = await apiFetch("/api/feedbacks");
+        const res = await apiFetch("/api/feedbacks", {
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error("Failed to fetch feedbacks");
         const data = await res.json();
 
-        setFeedback(data.data || []);
+        if (active) setFeedback(data.data || []);
       } catch (error) {
-        console.error(error);
+        if (active && !isApiRequestInterrupted(error)) {
+          console.error(error);
+        }
       }
     };
 
     fetchFeedbacks();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);

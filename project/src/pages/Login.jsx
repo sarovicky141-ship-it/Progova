@@ -52,7 +52,7 @@ const Login = () => {
             <section className="demo-credential-section" aria-labelledby="demo-admin-title">
               <h3 id="demo-admin-title">Admin</h3>
               <p><span>Email:</span> admin1@progova.com</p>
-              <p><span>Password:</span> Admin@Progova1</p>
+              <p><span>Password:</span> Admin@progova1</p>
             </section>
             <section className="demo-credential-section" aria-labelledby="demo-student-title">
               <h3 id="demo-student-title">Student</h3>

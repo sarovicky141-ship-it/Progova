@@ -12,6 +12,7 @@ import {
   Target,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { isApiRequestInterrupted } from "../../lib/api";
 
 const StudentHome = () => {
   const { user } = useAuth();
@@ -85,27 +86,37 @@ const StudentHome = () => {
   const [upcomingEvents, setupcomingEvents] = useState([]);
 
   useEffect(() => {
-    fetchAnnouncements();
-  }, []);
+    if (user?.role !== "student") return undefined;
 
-  const fetchAnnouncements = async () => {
-    try {
-      const response = await apiFetch("/api/announcements");
-      console.log(response);
+    const controller = new AbortController();
+    let active = true;
 
-      if (!response.ok) {
-        console.log(response);
-
-        throw new Error("Failed to fetch announcements");
+    const fetchAnnouncements = async () => {
+      try {
+        const response = await apiFetch("/api/announcements", {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch announcements");
+        }
+        const data = await response.json();
+        if (active) {
+          setupcomingEvents(data.data || data);
+        }
+      } catch (error) {
+        if (active && !isApiRequestInterrupted(error)) {
+          alert(error.message);
+        }
       }
-      const data = await response.json();
+    };
 
-      // Assuming backend returns announcements as an array in data field
-      setupcomingEvents(data.data || data);
-    } catch (error) {
-      alert(error.message);
-    }
-  };
+    fetchAnnouncements();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [user?.role, user?.uid]);
 
   const currentCourses = [
     { name: "Advanced Database Systems", progress: 85, credits: 4 },

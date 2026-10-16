@@ -8,9 +8,11 @@ import {
   TrendingUp,
   Award,
 } from "lucide-react";
-import { apiFetch } from "../../lib/api";
+import { useAuth } from "../../contexts/AuthContext";
+import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 
 const AdminHome = () => {
+  const { user } = useAuth();
   const [students, setStudents] = useState([]);
   const [feedback, setFeedback] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(""); // added missing state
@@ -18,35 +20,60 @@ const AdminHome = () => {
   ////feedback);
 
   useEffect(() => {
-    fetchStudents();
-  }, []);
+    if (user?.role !== "admin") return undefined;
 
-  const fetchStudents = async () => {
-    try {
-      const response = await apiFetch("/api/students");
-      if (!response.ok) throw new Error("Failed to fetch students");
-      const data = await response.json();
-      setStudents(data.data);
-    } catch (error) {
-      console.error(error);
-      alert(error.message);
-    }
-  };
+    const controller = new AbortController();
+    let active = true;
+    const fetchStudents = async () => {
+      try {
+        const response = await apiFetch("/api/students", {
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Failed to fetch students");
+        const data = await response.json();
+        if (active) setStudents(data.data);
+      } catch (error) {
+        if (active && !isApiRequestInterrupted(error)) {
+          console.error(error);
+          alert(error.message);
+        }
+      }
+    };
+    fetchStudents();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [user?.role, user?.uid]);
 
   useEffect(() => {
+    if (user?.role !== "admin") return undefined;
+
+    const controller = new AbortController();
+    let active = true;
     const fetchFeedbacks = async () => {
       try {
-        const res = await apiFetch("/api/feedbacks");
+        const res = await apiFetch("/api/feedbacks", {
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error("Failed to fetch feedbacks");
         const data = await res.json();
-        setFeedback(data.data || []);
+        if (active) setFeedback(data.data || []);
       } catch (error) {
-        console.error(error);
+        if (active && !isApiRequestInterrupted(error)) {
+          console.error(error);
+        }
       }
     };
 
     fetchFeedbacks();
-  }, []);
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [user?.role, user?.uid]);
 
   const filteredAttendance = students.filter((record) => {
     if (selectedCourse && record.course !== selectedCourse) return false;
@@ -136,22 +163,33 @@ const AdminHome = () => {
   const [upcomingEvents, setupcomingEvents] = useState([]);
 
   useEffect(() => {
-    fetchAnnouncements();
-  }, []);
+    if (user?.role !== "admin") return undefined;
 
-  const fetchAnnouncements = async () => {
-    try {
-      const response = await apiFetch("/api/announcements");
-      if (!response.ok) {
-        throw new Error("Failed to fetch announcements");
+    const controller = new AbortController();
+    let active = true;
+    const fetchAnnouncements = async () => {
+      try {
+        const response = await apiFetch("/api/announcements", {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch announcements");
+        }
+        const data = await response.json();
+        if (active) setupcomingEvents(data.data || data);
+      } catch (error) {
+        if (active && !isApiRequestInterrupted(error)) {
+          alert(error.message);
+        }
       }
-      const data = await response.json();
-      // Assuming backend returns announcements as an array in data field
-      setupcomingEvents(data.data || data);
-    } catch (error) {
-      alert(error.message);
-    }
-  };
+    };
+    fetchAnnouncements();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [user?.role, user?.uid]);
 
   return (
     <div className="admin-home">

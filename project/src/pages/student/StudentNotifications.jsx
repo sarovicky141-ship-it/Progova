@@ -9,27 +9,37 @@ import {
   Clock,
   AlertCircle,
 } from "lucide-react";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 
 const StudentNotifications = () => {
   const [notifications, setNotifications] = useState([]); // Start with empty array
 
   useEffect(() => {
-    // Fetch messages from backend API on mount
+    const controller = new AbortController();
+    let active = true;
     const fetchMessages = async () => {
       try {
-        const response = await apiFetch("/api/messages");
+        const response = await apiFetch("/api/messages", {
+          signal: controller.signal,
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch messages");
         }
         const data = await response.json();
-        setNotifications(data.data || []); // Set the messages from API response
+        if (active) setNotifications(data.data || []);
       } catch (error) {
-        alert(error.message);
+        if (active && !isApiRequestInterrupted(error)) {
+          alert(error.message);
+        }
       }
     };
 
     fetchMessages();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
   const [filterCategory, setFilterCategory] = useState("all");

@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 
 import {
@@ -15,6 +16,7 @@ import {
 import { doc, getDoc } from "firebase/firestore";
 
 import { auth, db } from "../../libs/firebase";
+import { cancelPendingApiRequests } from "../lib/api";
 
 const AuthContext = createContext();
 
@@ -45,8 +47,9 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const authStateRequest = useRef(0);
 
-  const syncUserProfile = useCallback(async (firebaseUser) => {
+  const syncUserProfile = useCallback(async (firebaseUser, requestId) => {
     if (!firebaseUser) {
       setUser(null);
       setLoading(false);
@@ -56,6 +59,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const userRef = doc(db, "users", firebaseUser.uid);
       const userSnapshot = await getDoc(userRef);
+
+      if (requestId !== authStateRequest.current) return;
 
       if (!userSnapshot.exists()) {
         console.error("No Firestore profile found for authenticated user.");
@@ -80,17 +85,23 @@ export const AuthProvider = ({ children }) => {
         ...profile,
       });
     } catch (error) {
+      if (requestId !== authStateRequest.current) return;
       logFirebaseErrorCode("Authentication-state profile lookup", error);
       setUser(null);
     } finally {
-      setLoading(false);
+      if (requestId === authStateRequest.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      cancelPendingApiRequests();
+      const requestId = ++authStateRequest.current;
+
       if (firebaseUser) {
-        syncUserProfile(firebaseUser);
+        syncUserProfile(firebaseUser, requestId);
       } else {
         setUser(null);
         setLoading(false);
@@ -173,6 +184,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await signOut(auth);
+      cancelPendingApiRequests();
       setUser(null);
       return { success: true };
     } catch (error) {

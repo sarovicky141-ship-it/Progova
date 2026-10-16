@@ -6,7 +6,7 @@ import {
   XCircle,
   Download,
 } from "lucide-react";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 
 const AttendanceManagement = () => {
   const [selectedDate, setSelectedDate] = useState(
@@ -18,33 +18,45 @@ const AttendanceManagement = () => {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
 
   useEffect(() => {
-    fetchStudents();
+    const controller = new AbortController();
+    fetchStudents(controller.signal);
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    fetchAttendanceForDate(selectedDate);
+    const controller = new AbortController();
+    fetchAttendanceForDate(selectedDate, controller.signal);
+
+    return () => controller.abort();
   }, [selectedDate]);
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (signal) => {
     try {
-      const response = await apiFetch("/api/students");
+      const response = await apiFetch("/api/students", { signal });
       if (!response.ok) throw new Error("Failed to fetch students");
       const data = await response.json();
-      setStudents(data.data || []);
+      if (!signal.aborted) setStudents(data.data || []);
     } catch (error) {
-      alert(error.message);
+      if (!signal.aborted && !isApiRequestInterrupted(error)) {
+        alert(error.message);
+      }
     }
   };
 
-  const fetchAttendanceForDate = async (date) => {
+  const fetchAttendanceForDate = async (date, signal) => {
     try {
-      const response = await apiFetch(`/api/attendance?date=${date}`);
+      const response = await apiFetch(`/api/attendance?date=${date}`, {
+        signal,
+      });
       if (!response.ok) throw new Error("Failed to fetch attendance");
       const data = await response.json();
-      setAttendanceRecords(data.data || []);
+      if (!signal.aborted) setAttendanceRecords(data.data || []);
     } catch (error) {
-      console.error(error);
-      setAttendanceRecords([]);
+      if (!signal.aborted && !isApiRequestInterrupted(error)) {
+        console.error(error);
+        setAttendanceRecords([]);
+      }
     }
   };
 

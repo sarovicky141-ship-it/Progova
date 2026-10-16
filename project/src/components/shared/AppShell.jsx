@@ -18,9 +18,11 @@ const AppShell = ({ children, role, navItems }) => {
   )
   const activeIndex = Math.max(navItems.indexOf(currentItem), 0)
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
+  const handleLogout = async () => {
+    const result = await logout()
+    if (result.success) {
+      navigate('/login', { replace: true })
+    }
   }
 
   return (
