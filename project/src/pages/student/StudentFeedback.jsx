@@ -9,13 +9,18 @@ import {
 } from "lucide-react";
 import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 import FormIllustration from "../../components/shared/FormIllustration";
+import LoadingState from "../../components/shared/LoadingState";
 
 const StudentFeedback = () => {
   const [feedback, setFeedback] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
+    setLoading(true);
+    setLoadError("");
     const fetchFeedbacks = async () => {
       try {
         const res = await apiFetch("/api/feedbacks", {
@@ -28,7 +33,10 @@ const StudentFeedback = () => {
       } catch (error) {
         if (active && !isApiRequestInterrupted(error)) {
           console.error(error);
+          setLoadError("Failed to load feedback.");
         }
+      } finally {
+        if (active) setLoading(false);
       }
     };
 
@@ -133,7 +141,9 @@ const StudentFeedback = () => {
   const getFeedbackStats = () => {
     const total = feedback.length;
     const reviewed = feedback.filter((f) => f.status === "Reviewed").length;
-    const avgRating = feedback.reduce((sum, f) => sum + f.rating, 0) / total;
+    const avgRating = total
+      ? feedback.reduce((sum, f) => sum + f.rating, 0) / total
+      : 0;
     return { total, reviewed, avgRating: avgRating.toFixed(1) };
   };
 
@@ -190,7 +200,13 @@ const StudentFeedback = () => {
 
       {/* Feedback List */}
       <div className="feedback-list">
-        {feedback.map((item) => (
+        {loading ? (
+          <LoadingState />
+        ) : loadError ? (
+          <p role="alert">{loadError}</p>
+        ) : feedback.length === 0 ? (
+          <p>No feedback has been submitted yet.</p>
+        ) : feedback.map((item) => (
           <div key={item.id} className="feedback-card">
             <div className="feedback-header">
               <div className="feedback-info">

@@ -7,6 +7,7 @@ import {
   Download,
 } from "lucide-react";
 import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
+import LoadingState from "../../components/shared/LoadingState";
 
 const AttendanceManagement = () => {
   const [selectedDate, setSelectedDate] = useState(
@@ -16,9 +17,15 @@ const AttendanceManagement = () => {
   const [selectedSemester, setSelectedSemester] = useState("");
   const [students, setStudents] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [studentsLoading, setStudentsLoading] = useState(true);
+  const [attendanceLoading, setAttendanceLoading] = useState(true);
+  const [studentsError, setStudentsError] = useState("");
+  const [attendanceError, setAttendanceError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
+    setStudentsLoading(true);
+    setStudentsError("");
     fetchStudents(controller.signal);
 
     return () => controller.abort();
@@ -26,6 +33,8 @@ const AttendanceManagement = () => {
 
   useEffect(() => {
     const controller = new AbortController();
+    setAttendanceLoading(true);
+    setAttendanceError("");
     fetchAttendanceForDate(selectedDate, controller.signal);
 
     return () => controller.abort();
@@ -39,8 +48,10 @@ const AttendanceManagement = () => {
       if (!signal.aborted) setStudents(data.data || []);
     } catch (error) {
       if (!signal.aborted && !isApiRequestInterrupted(error)) {
-        alert(error.message);
+        setStudentsError(error.message);
       }
+    } finally {
+      if (!signal.aborted) setStudentsLoading(false);
     }
   };
 
@@ -55,8 +66,11 @@ const AttendanceManagement = () => {
     } catch (error) {
       if (!signal.aborted && !isApiRequestInterrupted(error)) {
         console.error(error);
+        setAttendanceError(error.message);
         setAttendanceRecords([]);
       }
+    } finally {
+      if (!signal.aborted) setAttendanceLoading(false);
     }
   };
 
@@ -285,7 +299,23 @@ const AttendanceManagement = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredAttendance.map((record) => (
+            {studentsLoading || attendanceLoading ? (
+              <tr>
+                <td colSpan="7">
+                  <LoadingState />
+                </td>
+              </tr>
+            ) : studentsError || attendanceError ? (
+              <tr>
+                <td colSpan="7" role="alert">
+                  {studentsError || attendanceError}
+                </td>
+              </tr>
+            ) : filteredAttendance.length === 0 ? (
+              <tr>
+                <td colSpan="7">No students found for these filters.</td>
+              </tr>
+            ) : filteredAttendance.map((record) => (
               <tr key={record.id}>
                 <td>{record.id}</td>
                 <td>{record.name}</td>

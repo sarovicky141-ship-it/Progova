@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Calendar, TrendingUp, CheckCircle, XCircle, Clock } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { apiFetch, isApiRequestInterrupted } from '../../lib/api'
+import LoadingState from '../../components/shared/LoadingState'
 
 const StudentAttendance = () => {
   const { user } = useAuth()
@@ -9,10 +10,13 @@ const StudentAttendance = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [attendanceData, setAttendanceData] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     const controller = new AbortController()
     let active = true
+    setLoading(true)
+    setLoadError('')
 
     const fetchStudentAttendance = async () => {
       if (!user?.studentId) {
@@ -34,6 +38,7 @@ const StudentAttendance = () => {
         if (active && !isApiRequestInterrupted(error)) {
           console.error(error)
           setAttendanceData([])
+          setLoadError('Failed to load attendance records.')
         }
       } finally {
         if (active) setLoading(false)
@@ -94,7 +99,9 @@ const StudentAttendance = () => {
       </div>
 
       {loading ? (
-        <div className="loading-state">Loading attendance...</div>
+        <LoadingState />
+      ) : loadError ? (
+        <p role="alert">{loadError}</p>
       ) : (
         <>
           <div className="stats-grid">

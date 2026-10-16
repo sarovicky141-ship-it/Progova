@@ -11,18 +11,26 @@ import {
 } from "lucide-react";
 import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 import { useAuth } from "../../contexts/AuthContext";
+import LoadingState from "../../components/shared/LoadingState";
 
 const StudentPlacements = () => {
   const { user } = useAuth();
   const [filterType, setFilterType] = useState("all");
   const [appliedJobs, setAppliedJobs] = useState([]); // Start empty; backend can prepopulate if needed
   const [placements, setPlacements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    if (user?.role !== "student") return undefined;
+    if (user?.role !== "student") {
+      setLoading(false);
+      return undefined;
+    }
 
     const controller = new AbortController();
     let active = true;
+    setLoading(true);
+    setLoadError("");
 
     const fetchPlacements = async () => {
       try {
@@ -35,7 +43,10 @@ const StudentPlacements = () => {
       } catch (e) {
         if (active && !isApiRequestInterrupted(e)) {
           console.error(e);
+          setLoadError("Failed to load placement opportunities.");
         }
+      } finally {
+        if (active) setLoading(false);
       }
     };
 
@@ -180,7 +191,11 @@ const StudentPlacements = () => {
       </div>
       {/* Placements Grid */}
       <div className="placements-grid">
-        {filteredPlacements.map((placement) => (
+        {loading ? (
+          <LoadingState />
+        ) : loadError ? (
+          <p role="alert">{loadError}</p>
+        ) : filteredPlacements.map((placement) => (
           <div key={placement.id} className="placement-card">
             <div className="placement-header">
               <div className="company-info">
@@ -265,7 +280,7 @@ const StudentPlacements = () => {
           </div>
         ))}
       </div>
-      {filteredPlacements.length === 0 && (
+      {!loading && !loadError && filteredPlacements.length === 0 && (
         <div className="no-results">
           <Briefcase size={48} color="#9ca3af" />
           <h3>No placements found</h3>

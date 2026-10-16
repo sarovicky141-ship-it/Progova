@@ -10,13 +10,18 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
+import LoadingState from "../../components/shared/LoadingState";
 
 const StudentNotifications = () => {
   const [notifications, setNotifications] = useState([]); // Start with empty array
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
+    setLoading(true);
+    setLoadError("");
     const fetchMessages = async () => {
       try {
         const response = await apiFetch("/api/messages", {
@@ -29,8 +34,10 @@ const StudentNotifications = () => {
         if (active) setNotifications(data.data || []);
       } catch (error) {
         if (active && !isApiRequestInterrupted(error)) {
-          alert(error.message);
+          setLoadError(error.message);
         }
+      } finally {
+        if (active) setLoading(false);
       }
     };
 
@@ -221,7 +228,11 @@ const StudentNotifications = () => {
 
       {/* Notifications List */}
       <div className="notifications-list">
-        {filteredNotifications.map((notification) => (
+        {loading ? (
+          <LoadingState />
+        ) : loadError ? (
+          <p role="alert">{loadError}</p>
+        ) : filteredNotifications.map((notification) => (
           <div
             key={notification.id}
             className={`notification-card ${
@@ -286,7 +297,7 @@ const StudentNotifications = () => {
         ))}
       </div>
 
-      {filteredNotifications.length === 0 && (
+      {!loading && !loadError && filteredNotifications.length === 0 && (
         <div className="no-notifications">
           <Bell size={48} color="#9ca3af" />
           <h3>No notifications found</h3>

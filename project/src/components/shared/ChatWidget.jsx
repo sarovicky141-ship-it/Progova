@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MessageCircleMore, SendHorizontal, Sparkles, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
+import LoadingState from "./LoadingState";
 import "./ChatWidget.css";
 
 const welcomeMessage = {
@@ -215,10 +216,8 @@ const ChatWidget = () => {
 
             {isLoading && (
               <div className="chat-message is-assistant">
-                <div className="chat-message-bubble typing-indicator" aria-live="polite">
-                  <span />
-                  <span />
-                  <span />
+                <div className="chat-message-bubble" aria-live="polite">
+                  <LoadingState />
                 </div>
               </div>
             )}

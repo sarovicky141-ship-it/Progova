@@ -12,16 +12,24 @@ import {
 import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 import FormIllustration from "../../components/shared/FormIllustration";
 import { useAuth } from "../../contexts/AuthContext";
+import LoadingState from "../../components/shared/LoadingState";
 
 const PlacementManagement = () => {
   const { user } = useAuth();
   const [placements, setPlacements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    if (user?.role !== "admin") return undefined;
+    if (user?.role !== "admin") {
+      setLoading(false);
+      return undefined;
+    }
 
     const controller = new AbortController();
     let active = true;
+    setLoading(true);
+    setLoadError("");
     const fetchPlacements = async () => {
       try {
         const res = await apiFetch("/api/placements", {
@@ -34,7 +42,10 @@ const PlacementManagement = () => {
       } catch (e) {
         if (active && !isApiRequestInterrupted(e)) {
           console.error(e);
+          setLoadError("Failed to load placements.");
         }
+      } finally {
+        if (active) setLoading(false);
       }
     };
     fetchPlacements();
@@ -225,7 +236,13 @@ const PlacementManagement = () => {
 
       {/* Placements Grid */}
       <div className="placements-grid">
-        {placements.map((placement) => (
+        {loading ? (
+          <LoadingState />
+        ) : loadError ? (
+          <p role="alert">{loadError}</p>
+        ) : placements.length === 0 ? (
+          <p>No placements available.</p>
+        ) : placements.map((placement) => (
           <div key={placement.id} className="placement-card">
             <div className="placement-header">
               <div className="company-info">

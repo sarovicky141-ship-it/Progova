@@ -8,13 +8,18 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
+import LoadingState from "../../components/shared/LoadingState";
 
 const FeedbackManagement = () => {
   const [feedback, setFeedback] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
+    setLoading(true);
+    setLoadError("");
     const fetchFeedbacks = async () => {
       try {
         const res = await apiFetch("/api/feedbacks", {
@@ -26,7 +31,10 @@ const FeedbackManagement = () => {
       } catch (error) {
         if (active && !isApiRequestInterrupted(error)) {
           console.error(error);
+          setLoadError("Failed to load feedback.");
         }
+      } finally {
+        if (active) setLoading(false);
       }
     };
 
@@ -87,7 +95,9 @@ const FeedbackManagement = () => {
   const getFeedbackStats = () => {
     const total = feedback.length;
     const newCount = feedback.filter((f) => f.status === "New").length;
-    const avgRating = feedback.reduce((sum, f) => sum + f.rating, 0) / total;
+    const avgRating = total
+      ? feedback.reduce((sum, f) => sum + f.rating, 0) / total
+      : 0;
     const byType = {
       Course: feedback.filter((f) => f.type === "Course").length,
       Placement: feedback.filter((f) => f.type === "Placement").length,
@@ -208,7 +218,13 @@ const FeedbackManagement = () => {
 
       {/* Feedback List */}
       <div className="feedback-list">
-        {filteredFeedback.map((item) => (
+        {loading ? (
+          <LoadingState />
+        ) : loadError ? (
+          <p role="alert">{loadError}</p>
+        ) : filteredFeedback.length === 0 ? (
+          <p>No feedback found.</p>
+        ) : filteredFeedback.map((item) => (
           <div key={item.id} className="feedback-card">
             <div className="feedback-header">
               <div className="student-info">

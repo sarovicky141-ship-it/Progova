@@ -10,11 +10,18 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
+import LoadingState from "../../components/shared/LoadingState";
 
 const AdminHome = () => {
   const { user } = useAuth();
   const [students, setStudents] = useState([]);
   const [feedback, setFeedback] = useState([]);
+  const [studentsLoading, setStudentsLoading] = useState(true);
+  const [feedbackLoading, setFeedbackLoading] = useState(true);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
+  const [studentsError, setStudentsError] = useState("");
+  const [feedbackError, setFeedbackError] = useState("");
+  const [announcementsError, setAnnouncementsError] = useState("");
   const [selectedCourse, setSelectedCourse] = useState(""); // added missing state
   const [selectedSemester, setSelectedSemester] = useState(""); // added missing state
   ////feedback);
@@ -24,6 +31,8 @@ const AdminHome = () => {
 
     const controller = new AbortController();
     let active = true;
+    setStudentsLoading(true);
+    setStudentsError("");
     const fetchStudents = async () => {
       try {
         const response = await apiFetch("/api/students", {
@@ -35,8 +44,10 @@ const AdminHome = () => {
       } catch (error) {
         if (active && !isApiRequestInterrupted(error)) {
           console.error(error);
-          alert(error.message);
+          setStudentsError(error.message);
         }
+      } finally {
+        if (active) setStudentsLoading(false);
       }
     };
     fetchStudents();
@@ -52,6 +63,8 @@ const AdminHome = () => {
 
     const controller = new AbortController();
     let active = true;
+    setFeedbackLoading(true);
+    setFeedbackError("");
     const fetchFeedbacks = async () => {
       try {
         const res = await apiFetch("/api/feedbacks", {
@@ -63,7 +76,10 @@ const AdminHome = () => {
       } catch (error) {
         if (active && !isApiRequestInterrupted(error)) {
           console.error(error);
+          setFeedbackError("Failed to load feedback.");
         }
+      } finally {
+        if (active) setFeedbackLoading(false);
       }
     };
 
@@ -101,7 +117,8 @@ const AdminHome = () => {
   const stats = [
     {
       title: "Total Students",
-      value: students.length,
+      value: studentsError ? "Unavailable" : students.length,
+      loading: studentsLoading,
       change: "+12%",
       icon: Users,
       color: "bg-blue-500",
@@ -125,7 +142,8 @@ const AdminHome = () => {
     },
     {
       title: "Pending Feedback",
-      value: feedback.length,
+      value: feedbackError ? "Unavailable" : feedback.length,
+      loading: feedbackLoading,
       change: "",
       icon: MessageSquare,
       color: "bg-orange-500",
@@ -167,6 +185,8 @@ const AdminHome = () => {
 
     const controller = new AbortController();
     let active = true;
+    setAnnouncementsLoading(true);
+    setAnnouncementsError("");
     const fetchAnnouncements = async () => {
       try {
         const response = await apiFetch("/api/announcements", {
@@ -179,8 +199,10 @@ const AdminHome = () => {
         if (active) setupcomingEvents(data.data || data);
       } catch (error) {
         if (active && !isApiRequestInterrupted(error)) {
-          alert(error.message);
+          setAnnouncementsError(error.message);
         }
+      } finally {
+        if (active) setAnnouncementsLoading(false);
       }
     };
     fetchAnnouncements();
@@ -208,7 +230,7 @@ const AdminHome = () => {
               </div>
             </div>
             <div className="stat-content">
-              <h3>{stat.value}</h3>
+              {stat.loading ? <LoadingState /> : <h3>{stat.value}</h3>}
               <p>{stat.title}</p>
               <span
                 className={`stat-change ${
@@ -250,7 +272,13 @@ const AdminHome = () => {
             <Award size={20} color="#6b7280" />
           </div>
           <div className="events-list">
-            {upcomingEvents.map((event, index) => (
+            {announcementsLoading ? (
+              <LoadingState />
+            ) : announcementsError ? (
+              <p role="alert">{announcementsError}</p>
+            ) : upcomingEvents.length === 0 ? (
+              <p>No upcoming events.</p>
+            ) : upcomingEvents.map((event, index) => (
               <div key={index} className="event-item">
                 <div className="event-date">
                   <span className="date">{new Date(event.date).getDate()}</span>

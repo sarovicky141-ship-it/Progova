@@ -2,15 +2,24 @@ import React, { useState, useEffect } from "react";
 import { Send, Plus, Users, Bell, Mail, Trash2 } from "lucide-react";
 import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 import FormIllustration from "../../components/shared/FormIllustration";
+import LoadingState from "../../components/shared/LoadingState";
 
 const MessageCenter = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [messages, setMessages] = useState([]); // Start with empty array
   const [students, setStudents] = useState([]);
+  const [messagesLoading, setMessagesLoading] = useState(true);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
+  const [studentsLoading, setStudentsLoading] = useState(true);
+  const [messagesError, setMessagesError] = useState("");
+  const [announcementsError, setAnnouncementsError] = useState("");
+  const [studentsError, setStudentsError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
+    setMessagesLoading(true);
+    setMessagesError("");
     const fetchMessages = async () => {
       try {
         const response = await apiFetch("/api/messages", {
@@ -23,8 +32,10 @@ const MessageCenter = () => {
         if (active) setMessages(data.data || []);
       } catch (error) {
         if (active && !isApiRequestInterrupted(error)) {
-          alert(error.message);
+          setMessagesError(error.message);
         }
+      } finally {
+        if (active) setMessagesLoading(false);
       }
     };
 
@@ -38,6 +49,8 @@ const MessageCenter = () => {
 
   useEffect(() => {
     const controller = new AbortController();
+    setAnnouncementsLoading(true);
+    setAnnouncementsError("");
     fetchAnnouncements(controller.signal);
 
     return () => controller.abort();
@@ -46,6 +59,8 @@ const MessageCenter = () => {
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
+    setStudentsLoading(true);
+    setStudentsError("");
     const fetchStudents = async () => {
       try {
         const response = await apiFetch("/api/students", {
@@ -58,8 +73,10 @@ const MessageCenter = () => {
         if (active) setStudents(data.data || []);
       } catch (error) {
         if (active && !isApiRequestInterrupted(error)) {
-          alert(error.message);
+          setStudentsError(error.message);
         }
+      } finally {
+        if (active) setStudentsLoading(false);
       }
     };
 
@@ -82,8 +99,10 @@ const MessageCenter = () => {
       if (!signal.aborted) setAnnouncements(data.data || data);
     } catch (error) {
       if (!signal.aborted && !isApiRequestInterrupted(error)) {
-        alert(error.message);
+        setAnnouncementsError(error.message);
       }
+    } finally {
+      if (!signal.aborted) setAnnouncementsLoading(false);
     }
   };
 
@@ -285,7 +304,13 @@ const MessageCenter = () => {
             </h2>
           </div>
           <div className="messages-list">
-            {messages.map((message) => (
+            {messagesLoading ? (
+              <LoadingState />
+            ) : messagesError ? (
+              <p role="alert">{messagesError}</p>
+            ) : messages.length === 0 ? (
+              <p>No messages found.</p>
+            ) : messages.map((message) => (
               <div key={message.id} className="message-card">
                 <div className="message-header">
                   <div className="message-info">
@@ -333,7 +358,13 @@ const MessageCenter = () => {
             </h2>
           </div>
           <div className="announcements-list">
-            {announcements.map((announcement) => (
+            {announcementsLoading ? (
+              <LoadingState />
+            ) : announcementsError ? (
+              <p role="alert">{announcementsError}</p>
+            ) : announcements.length === 0 ? (
+              <p>No active announcements.</p>
+            ) : announcements.map((announcement) => (
               <div key={announcement.id} className="announcement-card">
                 <div className="announcement-header">
                   <div className="announcement-info">
@@ -419,6 +450,11 @@ const MessageCenter = () => {
                 {["individual", "group"].includes(newMessage.audienceType) && (
                   <div className="form-group">
                     <label className="form-label">Student Recipients</label>
+                    {studentsLoading ? (
+                      <LoadingState />
+                    ) : studentsError ? (
+                      <p role="alert">{studentsError}</p>
+                    ) : (
                     <select
                       className="form-select"
                       multiple={newMessage.audienceType === "group"}
@@ -454,6 +490,7 @@ const MessageCenter = () => {
                           </option>
                         ))}
                     </select>
+                    )}
                   </div>
                 )}
                 <div className="form-group">

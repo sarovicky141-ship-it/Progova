@@ -3,11 +3,16 @@ import { Search, Plus, Edit, Trash2, Eye, EyeOff, UserPlus } from "lucide-react"
 import { apiFetch, isApiRequestInterrupted } from "../../lib/api";
 import FormIllustration from "../../components/shared/FormIllustration";
 import "./StudentManagement.css";
+import LoadingState from "../../components/shared/LoadingState";
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
+    setLoading(true);
+    setLoadError("");
     fetchStudents(controller.signal);
 
     return () => controller.abort();
@@ -21,8 +26,10 @@ const StudentManagement = () => {
       if (!signal.aborted) setStudents(data.data);
     } catch (error) {
       if (!signal.aborted && !isApiRequestInterrupted(error)) {
-        alert(error.message);
+        setLoadError(error.message);
       }
+    } finally {
+      if (!signal.aborted) setLoading(false);
     }
   };
 
@@ -221,7 +228,21 @@ const StudentManagement = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredStudents.map((student) => (
+            {loading ? (
+              <tr>
+                <td colSpan="8">
+                  <LoadingState />
+                </td>
+              </tr>
+            ) : loadError ? (
+              <tr>
+                <td colSpan="8" role="alert">{loadError}</td>
+              </tr>
+            ) : filteredStudents.length === 0 ? (
+              <tr>
+                <td colSpan="8">No students found.</td>
+              </tr>
+            ) : filteredStudents.map((student) => (
               <tr key={student.id}>
                 <td>{student.id}</td>
                 <td>{student.name}</td>

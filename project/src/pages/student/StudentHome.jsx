@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { isApiRequestInterrupted } from "../../lib/api";
+import LoadingState from "../../components/shared/LoadingState";
 
 const StudentHome = () => {
   const { user } = useAuth();
@@ -84,12 +85,16 @@ const StudentHome = () => {
   ];
 
   const [upcomingEvents, setupcomingEvents] = useState([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
+  const [announcementsError, setAnnouncementsError] = useState("");
 
   useEffect(() => {
     if (user?.role !== "student") return undefined;
 
     const controller = new AbortController();
     let active = true;
+    setAnnouncementsLoading(true);
+    setAnnouncementsError("");
 
     const fetchAnnouncements = async () => {
       try {
@@ -105,8 +110,10 @@ const StudentHome = () => {
         }
       } catch (error) {
         if (active && !isApiRequestInterrupted(error)) {
-          alert(error.message);
+          setAnnouncementsError(error.message);
         }
+      } finally {
+        if (active) setAnnouncementsLoading(false);
       }
     };
 
@@ -236,26 +243,34 @@ const StudentHome = () => {
           <Clock size={20} color="#6b7280" />
         </div>
         <div className="events-grid">
-          {upcomingEvents.map((event, index) => (
-            <div key={index} className="event-card">
-              <div className="event-date">
-                <span className="date">{new Date(event.date).getDate()}</span>
-                <span className="month">
-                  {new Date(event.date).toLocaleDateString("en-US", {
-                    month: "short",
-                  })}
-                </span>
+          {announcementsLoading ? (
+            <LoadingState />
+          ) : announcementsError ? (
+            <p role="alert">{announcementsError}</p>
+          ) : upcomingEvents.length === 0 ? (
+            <p>No upcoming events.</p>
+          ) : (
+            upcomingEvents.map((event, index) => (
+              <div key={index} className="event-card">
+                <div className="event-date">
+                  <span className="date">{new Date(event.date).getDate()}</span>
+                  <span className="month">
+                    {new Date(event.date).toLocaleDateString("en-US", {
+                      month: "short",
+                    })}
+                  </span>
+                </div>
+                <div className="event-content">
+                  <h4>{event.title}</h4>
+                  <p>{event.time}</p>
+                  <span className={`event-type type-${event.type}`}>
+                    {event.type}
+                  </span>
+                  <span className="event-description">{event.content}</span>
+                </div>
               </div>
-              <div className="event-content">
-                <h4>{event.title}</h4>
-                <p>{event.time}</p>
-                <span className={`event-type type-${event.type}`}>
-                  {event.type}
-                </span>
-                <span className="event-description">{event.content}</span>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
